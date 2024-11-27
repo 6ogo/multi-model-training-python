@@ -101,3 +101,22 @@ After training, you will be able to see various visualizations:
 -Feature Importance (for tree-based models like Random Forest, XGBoost, CatBoost, and LightGBM)
 -Training and Validation Accuracy & Loss (for Neural Networks)
 -Decision Tree visualization (for Random Forest)
+
+##Contributing
+We welcome contributions to enhance the functionality and usability of this application. To contribute:
+
+Fork the repository.
+Create a new branch for your feature or bug fix.
+Make your changes and ensure the code adheres to best practices.
+Test your changes thoroughly.
+Submit a pull request with a clear description of your changes.
+Please adhere to the following guidelines when contributing:
+
+Follow the code style and structure used in the repository.
+Document any new features or updates in the README.md.
+Provide clear and concise commit messages.
+Ensure all dependencies are listed in requirements.txt.
+If you encounter any issues, feel free to open an issue in the repository.
+
+##License
+This project is licensed under the MIT License.
