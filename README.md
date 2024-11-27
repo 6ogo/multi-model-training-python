@@ -65,13 +65,13 @@ source venv/bin/activate  # On Windows use `venv\Scripts\activate`
 pip install -r requirements.txt
 ```
 
-Required Libraries:
-Streamlit: The library for the app's interface.
-Pandas, Numpy: For data manipulation and numerical operations.
-Matplotlib, Seaborn: For plotting and visualization.
-Scikit-learn: For preprocessing, model selection, training, and evaluation.
-TensorFlow: For building and training the neural network.
-XGBoost, CatBoost, LightGBM: For tree-based model implementations.
+Required Libraries
+-Streamlit: The library for the app's interface.
+-Pandas, Numpy: For data manipulation and numerical operations.
+-Matplotlib, Seaborn: For plotting and visualization.
+-Scikit-learn: For preprocessing, model selection, training, and evaluation.
+-TensorFlow: For building and training the neural network.
+-XGBoost, CatBoost, LightGBM: For tree-based model implementations.
 
 
 ### Step 3: Run the app
