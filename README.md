@@ -27,7 +27,6 @@ This repository contains a Streamlit-based application designed for model traini
   - Support Vector Machine
   - Neural Network (using Keras)
   - XGBoost
-  - CatBoost
   - LightGBM
 - **Hyperparameter Tuning**: Customize model hyperparameters with options for grid search on some models.
 - **Evaluation Metrics**: Evaluate the model performance using metrics like:
@@ -71,7 +70,7 @@ pip install -r requirements.txt
 - Matplotlib, Seaborn: For plotting and visualization.
 - Scikit-learn: For preprocessing, model selection, training, and evaluation.
 - TensorFlow: For building and training the neural network.
-- XGBoost, CatBoost, LightGBM: For tree-based model implementations.
+- XGBoost, LightGBM: For tree-based model implementations.
 
 
 ### Step 3: Run the app
@@ -98,7 +97,6 @@ Pick the model to train from the dropdown list. The available models are:
 -Support Vector Machine
 -Neural Network
 -XGBoost
--CatBoost
 -LightGBM
 
 **Hyperparameter Tuning (Optional):**
