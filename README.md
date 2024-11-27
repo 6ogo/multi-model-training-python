@@ -1,7 +1,5 @@
 # Model Training and Evaluation App
 
-This repository contains a Streamlit-based application designed for model training and evaluation on a given dataset. The app allows users to upload a CSV file, select target variables, choose from multiple machine learning models, and evaluate their performance. The application includes data preprocessing steps like handling missing values, feature selection based on correlation, and scaling, alongside hyperparameter tuning for some models. The app then outputs various performance metrics and visualizations, such as confusion matrices, ROC curves, feature importance plots, and model training histories.
-
 ### Key Points in the README:
 1. **Project Overview** - Provides a brief explanation of the app.
 2. **Features** - Lists the features of the app, including the models supported, the types of evaluations, and visualizations available.
@@ -9,6 +7,11 @@ This repository contains a Streamlit-based application designed for model traini
 4. **Usage** - A step-by-step guide on how to use the app after it is set up, including how to upload data, select models, tune hyperparameters, and view results.
 5. **Contributing** - Information on how to contribute to the repository.
 6. **License** - Information about the project's license.
+
+
+## Project Overview
+
+This repository contains a Streamlit-based application designed for model training and evaluation on a given dataset. The app allows users to upload a CSV file, select target variables, choose from multiple machine learning models, and evaluate their performance. The application includes data preprocessing steps like handling missing values, feature selection based on correlation, and scaling, alongside hyperparameter tuning for some models. The app then outputs various performance metrics and visualizations, such as confusion matrices, ROC curves, feature importance plots, and model training histories.
 
 ## Features
 
@@ -39,7 +42,7 @@ This repository contains a Streamlit-based application designed for model traini
   - Training History plots for Neural Network models.
   - Decision Tree visualization for Random Forest models.
 
-## Installation
+## Installation Instructions
 
 To run this application locally, you'll need Python 3.7+ and the following dependencies:
 
@@ -61,6 +64,15 @@ source venv/bin/activate  # On Windows use `venv\Scripts\activate`
 # Install the dependencies (mandatory)
 pip install -r requirements.txt
 ```
+
+Required Libraries:
+Streamlit: The library for the app's interface.
+Pandas, Numpy: For data manipulation and numerical operations.
+Matplotlib, Seaborn: For plotting and visualization.
+Scikit-learn: For preprocessing, model selection, training, and evaluation.
+TensorFlow: For building and training the neural network.
+XGBoost, CatBoost, LightGBM: For tree-based model implementations.
+
 
 ### Step 3: Run the app
 ```
