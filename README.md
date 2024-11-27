@@ -76,7 +76,7 @@ pip install -r requirements.txt
 
 ### Step 3: Run the app
 ```
-streamlit run app.py
+streamlit run multiModel.py
 ```
 This will start the app in your browser.
 
