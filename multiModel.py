@@ -12,6 +12,8 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
 from sklearn.model_selection import train_test_split, GridSearchCV
+import tensorflow as tf
+from tensorflow import keras
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Input
 from tensorflow.keras.utils import to_categorical
@@ -19,16 +21,13 @@ from sklearn.tree import plot_tree
 
 # Add error handling for imports
 try:
-    import tensorflow as tf
     import xgboost as xgb
-    import catboost as cb
     import lightgbm as lgb
 except ImportError as e:
     st.error(f"Missing required package: {e.name}. Please install it using pip.")
 
 # Function to train and evaluate the model with hyperparameter tuning
-@st.cache_data
-def train_and_evaluate_model(X, y, model_choice, param_grid=None, correlation_threshold=0.82, test_size=0.3, progress_callback=None):
+def train_and_evaluate_model(X, y, model_choice, param_grid=None, correlation_threshold=0.82, test_size=0.3):
     # Remove highly correlated features
     corr_matrix = X.corr().abs()
     upper = corr_matrix.where(np.triu(np.ones(corr_matrix.shape), k=1).astype(bool))
@@ -44,47 +43,64 @@ def train_and_evaluate_model(X, y, model_choice, param_grid=None, correlation_th
     X_test_scaled = scaler.transform(X_test)
     
     if model_choice == "Neural Network":
-        # Convert labels to categorical
-        y_train_cat = to_categorical(y_train)
-        y_test_cat = to_categorical(y_test)
-        
-        # Define the neural network model
-        model = Sequential()
-        model.add(Input(shape=(X_train_scaled.shape[1],)))
-        model.add(Dense(64, activation='relu'))
-        model.add(Dense(32, activation='relu'))
-        model.add(Dense(y_train_cat.shape[1], activation='softmax'))
-        
-        # Compile the model
-        model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
-        
-        # Train the model
-        history = model.fit(X_train_scaled, y_train_cat, epochs=50, batch_size=10, verbose=0, validation_split=0.2)
-        
-        # Evaluate the model
-        _, accuracy = model.evaluate(X_test_scaled, y_test_cat, verbose=0)
-        y_pred_proba = model.predict(X_test_scaled)
-        y_test_encoded = to_categorical(y_test)
-        y_pred = np.argmax(y_pred_proba, axis=1)
-        logloss = log_loss(y_test_encoded, y_pred_proba)
+        # Check if binary classification
+        n_classes = len(np.unique(y))
+        if n_classes == 2:
+            # Binary classification
+            model = Sequential([
+                Input(shape=(X_train_scaled.shape[1],)),
+                Dense(64, activation='relu'),
+                Dense(32, activation='relu'),
+                Dense(1, activation='sigmoid')
+            ])
+            model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+            # No need for to_categorical for binary classification
+            history = model.fit(X_train_scaled, y_train, epochs=50, batch_size=10, verbose=0, validation_split=0.2)
+            
+            # Make predictions
+            y_pred_proba = model.predict(X_test_scaled)
+            y_pred = (y_pred_proba > 0.5).astype(int)
+            accuracy = accuracy_score(y_test, y_pred)
+            
+        else:
+            # Multiclass classification
+            model = Sequential([
+                Input(shape=(X_train_scaled.shape[1],)),
+                Dense(64, activation='relu'),
+                Dense(32, activation='relu'),
+                Dense(n_classes, activation='softmax')
+            ])
+            model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+            
+            # Convert labels to categorical
+            y_train_cat = to_categorical(y_train)
+            y_test_cat = to_categorical(y_test)
+            
+            # Train the model
+            history = model.fit(X_train_scaled, y_train_cat, epochs=50, batch_size=10, verbose=0, validation_split=0.2)
+            
+            # Make predictions
+            y_pred_proba = model.predict(X_test_scaled)
+            y_pred = np.argmax(y_pred_proba, axis=1)
+            accuracy = accuracy_score(y_test, y_pred)
+
+        # Common evaluation code for both binary and multiclass
         conf_matrix = confusion_matrix(y_test, y_pred)
         class_report = classification_report(y_test, y_pred)
-        
-        if progress_callback:
-            progress_callback(0.2)  # After data prep
-            progress_callback(0.4)  # After model init
-            progress_callback(0.6)  # During training
-            progress_callback(0.8)  # After evaluation
-            progress_callback(1.0)  # Complete
-        
-        return model, accuracy, conf_matrix, class_report, y_test, y_pred_proba, None, logloss, X_train_scaled, y_train_cat, history
+        logloss = log_loss(y_test, y_pred_proba.reshape(-1, 1) if n_classes == 2 else y_pred_proba)
+
+        return model, accuracy, conf_matrix, class_report, y_test, y_pred_proba, None, logloss, X_train_scaled, y_train, history
     else:
         # Perform hyperparameter tuning with cross-validation if param_grid is provided
         if param_grid:
-            grid_search = GridSearchCV(model_choice, param_grid, cv=5, scoring='accuracy', n_jobs=-1)
-            grid_search.fit(X_train_scaled, y_train)
-            best_params = grid_search.best_params_
-            model = model_choice.set_params(**best_params)
+            try:
+                grid_search = GridSearchCV(model_choice, param_grid, cv=5, scoring='accuracy', n_jobs=-1, error_score='raise')
+                grid_search.fit(X_train_scaled, y_train)
+                best_params = grid_search.best_params_
+                model = model_choice.set_params(**best_params)
+            except Exception as e:
+                st.error(f"Error during grid search: {str(e)}")
+                return None
         else:
             model = model_choice
         
@@ -100,13 +116,6 @@ def train_and_evaluate_model(X, y, model_choice, param_grid=None, correlation_th
         conf_matrix = confusion_matrix(y_test, y_pred)
         class_report = classification_report(y_test, y_pred)
         logloss = log_loss(y_test, y_pred_proba) if y_pred_proba is not None else None
-        
-        if progress_callback:
-            progress_callback(0.2)  # After data prep
-            progress_callback(0.4)  # After model init
-            progress_callback(0.6)  # During training
-            progress_callback(0.8)  # After evaluation
-            progress_callback(1.0)  # Complete
         
         return model, accuracy, conf_matrix, class_report, y_test, y_pred_proba, best_params if param_grid else None, logloss, X_train_scaled, y_train, None
 
@@ -168,8 +177,12 @@ if uploaded_file:
                 if sample_size > len(df):
                     st.error("Sample size larger than dataset")
                 else:
-                    df = df.sample(n=min(sample_size, len(df)), random_state=42)
-            
+                    # Sample both features and target together
+                    sampled_indices = np.random.choice(len(df), size=sample_size, replace=False)
+                    df = df.iloc[sampled_indices]
+                    X = df.drop(columns=[target_column])
+                    y = df[target_column]
+
             # Splitting the data into features and target
             y = df[target_column]
             
@@ -183,7 +196,7 @@ if uploaded_file:
             test_size = st.slider("Select test size", 0.1, 0.5, 0.3, 0.01)
             
             # Select model
-            model_choice = st.selectbox("Select model", ["Logistic Regression", "Random Forest", "K-Nearest Neighbors", "Support Vector Machine", "Neural Network", "XGBoost", "CatBoost", "LightGBM"])
+            model_choice = st.selectbox("Select model", ["Logistic Regression", "Random Forest", "K-Nearest Neighbors", "Support Vector Machine", "Neural Network", "XGBoost", "LightGBM"])
             
             # Set hyperparameters
             param_grid = None
@@ -191,7 +204,7 @@ if uploaded_file:
                 model = LogisticRegression()
                 param_grid = {
                     'C': st.multiselect('C', [0.01, 0.1, 1, 10, 100], default=[1]),
-                    'max_iter': st.slider("Select max iterations", 100, 3000, 1000, 50),
+                    'max_iter': [st.slider("Select max iterations", 100, 3000, 1000, 50)],  # Wrapped in list
                     'penalty': st.multiselect('penalty', ['l1', 'l2'], default=['l2']),
                     'solver': st.multiselect('solver', ['liblinear', 'saga'], default=['saga']),
                     'class_weight': st.multiselect('class_weight', ['balanced', None], default=['balanced'])
@@ -220,20 +233,11 @@ if uploaded_file:
                 }
             elif model_choice == "Neural Network":
                 model = "Neural Network"
-                param_grid = None
             elif model_choice == "XGBoost":
                 model = xgb.XGBClassifier(use_label_encoder=False, eval_metric='mlogloss')
                 param_grid = {
                     'n_estimators': st.multiselect('n_estimators', [50, 100, 200], default=[100]),
                     'max_depth': st.multiselect('max_depth', [3, 6, 9], default=[6]),
-                    'learning_rate': st.multiselect('learning_rate', [0.01, 0.1, 0.2], default=[0.1]),
-                    'scale_pos_weight': st.multiselect('scale_pos_weight', [1, 10, 100], default=[1])
-                }
-            elif model_choice == "CatBoost":
-                model = cb.CatBoostClassifier(verbose=0)
-                param_grid = {
-                    'iterations': st.multiselect('iterations', [100, 200, 300], default=[200]),
-                    'depth': st.multiselect('depth', [4, 6, 10], default=[6]),
                     'learning_rate': st.multiselect('learning_rate', [0.01, 0.1, 0.2], default=[0.1]),
                     'scale_pos_weight': st.multiselect('scale_pos_weight', [1, 10, 100], default=[1])
                 }
@@ -257,7 +261,7 @@ if uploaded_file:
                     progress_text = st.empty()
                     
                     # Train and evaluate the model
-                    result = train_and_evaluate_model(X, y, model, param_grid, correlation_threshold, test_size, progress_callback=lambda p: progress_bar.progress(p))
+                    result = train_and_evaluate_model(X, y, model, param_grid, correlation_threshold, test_size)
                     if result is not None:
                         best_model, accuracy, conf_matrix, class_report, y_test, y_pred_proba, best_params, logloss, X_train_scaled, y_train, history = result
                         st.write(f'Accuracy: {accuracy:.4f}')
@@ -288,13 +292,11 @@ if uploaded_file:
                         else:
                                 st.write("ROC curve is only available for binary classification")
                         # Plot feature importance for models that support it
-                        if model_choice in ["Random Forest", "XGBoost", "CatBoost", "LightGBM"]:
+                        if model_choice in ["Random Forest", "XGBoost", "LightGBM"]:
                             if model_choice == "Random Forest":
                                 feature_importances = best_model.feature_importances_
                             elif model_choice == "XGBoost":
                                 feature_importances = best_model.feature_importances_
-                            elif model_choice == "CatBoost":
-                                feature_importances = best_model.get_feature_importance()
                             elif model_choice == "LightGBM":
                                 feature_importances = best_model.feature_importances_
                             
