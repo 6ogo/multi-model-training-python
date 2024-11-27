@@ -15,7 +15,6 @@ from sklearn.model_selection import train_test_split, GridSearchCV
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Input
 from tensorflow.keras.utils import to_categorical
-from tensorflow.compat.v1 import reset_default_graph
 from sklearn.tree import plot_tree
 
 # Add error handling for imports
