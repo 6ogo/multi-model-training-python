@@ -1,4 +1,6 @@
 # Model Training and Evaluation App
+#### Now deployed on streamlit!
+https://mmtrain.streamlit.app/
 
 ### Key Points in the README:
 1. **Project Overview** - Provides a brief explanation of the app.
@@ -7,7 +9,6 @@
 4. **Usage** - A step-by-step guide on how to use the app after it is set up, including how to upload data, select models, tune hyperparameters, and view results.
 5. **Contributing** - Information on how to contribute to the repository.
 6. **License** - Information about the project's license.
-
 
 ## Project Overview
 
