@@ -253,12 +253,6 @@ if uploaded_file:
                     sampled_indices = np.random.choice(len(X), size=sample_size, replace=False)
                     X = X.iloc[sampled_indices]
                     y = y.iloc[sampled_indices]
-
-            
-            # Encode the target variable if it's categorical
-            if y.dtype == 'object':
-                le = LabelEncoder()
-                y = le.fit_transform(y)
             
             # Select correlation threshold and test size
             correlation_threshold = st.slider("Select correlation threshold", 0.0, 1.0, 0.82, 0.01)
