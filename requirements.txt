@@ -6,5 +6,4 @@ seaborn
 scikit-learn
 tensorflow
 xgboost
-catboost
 lightgbm
