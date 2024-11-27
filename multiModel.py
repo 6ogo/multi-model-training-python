@@ -146,45 +146,114 @@ if uploaded_file:
         
         # Drop selected columns
         if "Auto" in drop_columns:
+            # First, select target variable
+            y = df[target_column]        
+            # Initialize X by dropping the target column
             X = df.drop(columns=[target_column])
+            
+            # Identify numeric and datetime columns
+            numeric_cols = X.select_dtypes(include=['int64', 'float64']).columns
+            datetime_cols = X.select_dtypes(include=['datetime64']).columns
+            
+            # Convert potential datetime strings to datetime objects
+            for col in X.columns:
+                if col not in numeric_cols:
+                    try:
+                        # First try to infer the format from the first few rows
+                        sample_dates = X[col].head()
+                        # Try common date formats
+                        date_formats = [
+                            '%Y-%m-%d',           # 2024-03-27
+                            '%d/%m/%Y',           # 27/03/2024
+                            '%m/%d/%Y',           # 03/27/2024
+                            '%Y-%m-%d %H:%M:%S',  # 2024-03-27 14:30:00
+                            '%d-%m-%Y',           # 27-03-2024
+                            '%Y/%m/%d'            # 2024/03/27
+                        ]
+                        
+                        for date_format in date_formats:
+                            try:
+                                pd.to_datetime(sample_dates, format=date_format)
+                                # If successful, use this format for the entire column
+                                pd.to_datetime(X[col], format=date_format)
+                                datetime_cols = datetime_cols.append(pd.Index([col]))
+                                break
+                            except ValueError:
+                                continue
+                        else:
+                            # If none of the common formats work, try the flexible parser
+                            pd.to_datetime(X[col], infer_datetime_format=True)
+                            datetime_cols = datetime_cols.append(pd.Index([col]))
+                    except:
+                        continue
+            
+            # For datetime columns, create numeric features
+            for col in datetime_cols:
+                try:
+                    # Convert to datetime if it's not already
+                    if X[col].dtype != 'datetime64[ns]':
+                        X[col] = pd.to_datetime(X[col])
+                    
+                    # Extract useful numeric features from datetime
+                    X[f'{col}_year'] = X[col].dt.year
+                    X[f'{col}_month'] = X[col].dt.month
+                    X[f'{col}_day'] = X[col].dt.day
+                    X[f'{col}_dayofweek'] = X[col].dt.dayofweek
+                    
+                    # Drop the original datetime column
+                    X = X.drop(columns=[col])
+                except:
+                    # If conversion fails, we'll drop the column
+                    X = X.drop(columns=[col])
+            
+            # Select only numeric columns for the final feature set
             X = X.select_dtypes(include=[np.number])
+            
+            # Remove columns with constant values
+            constant_cols = [col for col in X.columns if X[col].nunique() <= 1]
+            X = X.drop(columns=constant_cols)
+            
+            # Handle any remaining non-numeric columns or missing values
+            X = X.apply(pd.to_numeric, errors='coerce')
         else:
+            # First, select target variable
+            y = df[target_column]
             X = df.drop(columns=[target_column] + drop_columns)
             X = X.select_dtypes(include=[np.number])
         
         # Ensure that X is not empty after dropping columns
         if X.empty:
-            st.error("No numeric columns available after dropping selected columns. Please check your input data and preprocessing steps.")
+            st.error("No numeric columns available after preprocessing. Please check your input data.")
         else:
             # Fill missing values
             fill_value = st.text_input("Enter value to fill missing values (e.g., 0 or mean):", "0")
             if fill_value.lower() == 'mean':
                 try:
-                    df = df.fillna(df.mean())
+                    X = X.fillna(X.mean())
                 except TypeError:
                     st.error("Cannot calculate mean for non-numeric columns")
-                    st.stop()  # Use st.stop() instead of return
+                    st.stop()
             else:
                 try:
-                    df = df.fillna(float(fill_value))
+                    X = X.fillna(float(fill_value))
                 except ValueError:
                     st.error("Invalid fill value. Please enter a number or 'mean'")
                     st.stop()
-            
+            if y.dtype == 'object':
+                le = LabelEncoder()
+                y = le.fit_transform(y)
+
             # Select sample size
             sample_size = st.number_input("Enter sample size (0 for full dataset):", min_value=0, value=0, step=1)
             if sample_size > 0:
-                if sample_size > len(df):
+                if sample_size > len(X):
                     st.error("Sample size larger than dataset")
                 else:
                     # Sample both features and target together
-                    sampled_indices = np.random.choice(len(df), size=sample_size, replace=False)
-                    df = df.iloc[sampled_indices]
-                    X = df.drop(columns=[target_column])
-                    y = df[target_column]
+                    sampled_indices = np.random.choice(len(X), size=sample_size, replace=False)
+                    X = X.iloc[sampled_indices]
+                    y = y.iloc[sampled_indices]
 
-            # Splitting the data into features and target
-            y = df[target_column]
             
             # Encode the target variable if it's categorical
             if y.dtype == 'object':
