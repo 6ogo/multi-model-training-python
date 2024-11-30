@@ -14,9 +14,9 @@ from sklearn.svm import SVC
 from sklearn.model_selection import train_test_split, GridSearchCV
 import tensorflow as tf
 from tensorflow import keras
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, Input
-from tensorflow.keras.utils import to_categorical
+from tensorflow.python.keras.engine.sequential import Sequential
+from tensorflow.python.keras.layers import Dense, Input
+from tensorflow.python.keras.utils import to_categorical
 from sklearn.tree import plot_tree
 
 # Add error handling for imports
