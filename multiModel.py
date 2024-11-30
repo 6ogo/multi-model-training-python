@@ -12,21 +12,66 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
 from sklearn.model_selection import train_test_split, GridSearchCV
-import tensorflow as tf
-from tensorflow import keras
-from tensorflow.python.keras.engine.sequential import Sequential
-from tensorflow.python.keras.layers import Dense, Input
-from tensorflow.python.keras.utils import to_categorical
+from sklearn.neural_network import MLPClassifier  # Using sklearn's neural network instead
 from sklearn.tree import plot_tree
 
-# Add error handling for imports
+# Initialize flags for optional dependencies
+XGBOOST_AVAILABLE = False
+LIGHTGBM_AVAILABLE = False
+
+# Try importing XGBoost with detailed error handling
 try:
     import xgboost as xgb
-    import lightgbm as lgb
-except ImportError as e:
-    st.error(f"Missing required package: {e.name}. Please install it using pip.")
+    # Verify XGBoost is working by creating a simple model
+    test_model = xgb.XGBClassifier()
+    XGBOOST_AVAILABLE = True
+except Exception as e:
+    st.warning(f"XGBoost is not properly configured: {str(e)}\nSome features will be disabled.")
 
-# Function to train and evaluate the model with hyperparameter tuning
+# Try importing LightGBM with detailed error handling
+try:
+    import lightgbm as lgb
+    # Verify LightGBM is working by creating a simple model
+    test_model = lgb.LGBMClassifier()
+    LIGHTGBM_AVAILABLE = True
+except Exception as e:
+    st.warning(f"LightGBM is not properly configured: {str(e)}\nSome features will be disabled.")
+
+def get_available_models():
+    models = ["Logistic Regression", "Random Forest", "K-Nearest Neighbors", 
+              "Support Vector Machine", "Neural Network"]
+    
+    if XGBOOST_AVAILABLE:
+        models.append("XGBoost")
+    if LIGHTGBM_AVAILABLE:
+        models.append("LightGBM")
+    
+    return models
+
+# Function to create and train neural network using sklearn
+def create_neural_network(n_features, n_classes):
+    if n_classes == 2:
+        # Binary classification
+        return MLPClassifier(
+            hidden_layer_sizes=(64, 32),
+            activation='relu',
+            solver='adam',
+            max_iter=50,
+            random_state=42,
+            early_stopping=True
+        )
+    else:
+        # Multiclass classification
+        return MLPClassifier(
+            hidden_layer_sizes=(64, 32),
+            activation='relu',
+            solver='adam',
+            max_iter=50,
+            random_state=42,
+            early_stopping=True
+        )
+
+# Modified train_and_evaluate_model function
 def train_and_evaluate_model(X, y, model_choice, param_grid=None, correlation_threshold=0.5, test_size=0.3):
     # Remove highly correlated features
     corr_matrix = X.corr().abs()
@@ -34,7 +79,7 @@ def train_and_evaluate_model(X, y, model_choice, param_grid=None, correlation_th
     to_drop = [column for column in upper.columns if any(upper[column] > correlation_threshold)]
     X = X.drop(columns=to_drop)
     
-    # Split the dataset into training and testing sets
+    # Split the dataset
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=42)
     
     # Scale the features
@@ -43,55 +88,42 @@ def train_and_evaluate_model(X, y, model_choice, param_grid=None, correlation_th
     X_test_scaled = scaler.transform(X_test)
     
     if model_choice == "Neural Network":
-        # Check if binary classification
         n_classes = len(np.unique(y))
-        if n_classes == 2:
-            # Binary classification
-            model = Sequential([
-                Input(shape=(X_train_scaled.shape[1],)),
-                Dense(64, activation='relu'),
-                Dense(32, activation='relu'),
-                Dense(1, activation='sigmoid')
-            ])
-            model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
-            # No need for to_categorical for binary classification
-            history = model.fit(X_train_scaled, y_train, epochs=50, batch_size=10, verbose=0, validation_split=0.2)
-            
-            # Make predictions
-            y_pred_proba = model.predict(X_test_scaled)
-            y_pred = (y_pred_proba > 0.5).astype(int)
-            accuracy = accuracy_score(y_test, y_pred)
-        else:
-            # Multiclass classification
-            model = Sequential([
-                Input(shape=(X_train_scaled.shape[1],)),
-                Dense(64, activation='relu'),
-                Dense(32, activation='relu'),
-                Dense(n_classes, activation='softmax')
-            ])
-            model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
-            
-            # Convert labels to categorical
-            y_train_cat = to_categorical(y_train)
-            y_test_cat = to_categorical(y_test)
-            
-            # Train the model
-            history = model.fit(X_train_scaled, y_train_cat, epochs=50, batch_size=10, verbose=0, validation_split=0.2)
-            
-            # Make predictions
-            y_pred_proba = model.predict(X_test_scaled)
-            y_pred = np.argmax(y_pred_proba, axis=1)
-            accuracy = accuracy_score(y_test, y_pred)
+        model = create_neural_network(X_train_scaled.shape[1], n_classes)
         
-        # Common evaluation code for both binary and multiclass
+        # Train the model and get training history
+        model.fit(X_train_scaled, y_train)
+        
+        # Make predictions
+        y_pred = model.predict(X_test_scaled)
+        y_pred_proba = model.predict_proba(X_test_scaled)
+        
+        if n_classes == 2:
+            y_pred_proba = y_pred_proba[:, 1]
+        
+        # Evaluate the model
+        accuracy = accuracy_score(y_test, y_pred)
         conf_matrix = confusion_matrix(y_test, y_pred)
         class_report = classification_report(y_test, y_pred)
-        logloss = log_loss(y_test, y_pred_proba.reshape(-1, 1) if n_classes == 2 else y_pred_proba)
+        
+        # Calculate log loss
+        if n_classes == 2:
+            logloss = log_loss(y_test, y_pred_proba)
+        else:
+            logloss = log_loss(y_test, y_pred_proba)
+        
+        # Create a history-like object for compatibility
+        history = {
+            'loss': model.loss_curve_,
+            'val_loss': [],  # MLPClassifier doesn't provide validation loss
+            'accuracy': [],  # Calculate if needed
+            'val_accuracy': []  # Calculate if needed
+        }
         
         return model, accuracy, conf_matrix, class_report, y_test, y_pred_proba, None, logloss, X_train_scaled, X_test_scaled, y_train, history
     
     else:
-        # Perform hyperparameter tuning with cross-validation if param_grid is provided
+        # Original code for other models remains the same
         if param_grid:
             try:
                 grid_search = GridSearchCV(model_choice, param_grid, cv=5, scoring='accuracy', n_jobs=-1, error_score='raise')
@@ -118,7 +150,6 @@ def train_and_evaluate_model(X, y, model_choice, param_grid=None, correlation_th
         logloss = log_loss(y_test, y_pred_proba) if y_pred_proba is not None else None
         
         return model, accuracy, conf_matrix, class_report, y_test, y_pred_proba, best_params if param_grid else None, logloss, X_train_scaled, X_test_scaled, y_train, None
-
 # Streamlit app
 st.title('Model Training and Evaluation App')
 
@@ -272,7 +303,8 @@ if uploaded_file:
             test_size = st.slider("Select test size", 0.1, 0.5, 0.3, 0.01)
             
             # Select model
-            model_choice = st.selectbox("Select model", ["Logistic Regression", "Random Forest", "K-Nearest Neighbors", "Support Vector Machine", "Neural Network", "XGBoost", "LightGBM"])
+            model_choice = st.selectbox("Select model", get_available_models())
+
             
             # Set hyperparameters
             param_grid = None
