@@ -113,7 +113,7 @@ After training, you will be able to see various visualizations:
 -Training and Validation Accuracy & Loss (for Neural Networks)
 -Decision Tree visualization (for Random Forest)
 
-##Contributing
+## Contributing
 We welcome contributions to enhance the functionality and usability of this application. To contribute:
 
 Fork the repository.
