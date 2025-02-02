@@ -49,7 +49,7 @@ To run this application locally, you'll need Python 3.7+ and the following depen
 ### Step 1: Clone the repository
 
 ```
-git clone https://github.com/yourusername/model-training-app.git
+git clone https://github.com/6ogo/multi-model-training-python.git
 cd model-training-app
 ```
 
@@ -123,7 +123,6 @@ Test your changes thoroughly.
 Submit a pull request with a clear description of your changes.
 Please adhere to the following guidelines when contributing:
 
-Follow the code style and structure used in the repository.
 Document any new features or updates in the README.md.
 Provide clear and concise commit messages.
 Ensure all dependencies are listed in requirements.txt.
