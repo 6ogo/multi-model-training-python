@@ -50,7 +50,7 @@ To run this application locally, you'll need Python 3.7+ and the following depen
 
 ```
 git clone https://github.com/6ogo/multi-model-training-python.git
-cd model-training-app
+cd multi-model-training-python
 ```
 
 ### Step 2: Install dependencies
